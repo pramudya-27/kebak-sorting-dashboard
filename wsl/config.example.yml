@@ -1,0 +1,49 @@
+# WSL Multi-Model YOLO Inference Server Configuration
+
+# YOLO Models Configuration
+models:
+  - name: "yolov8n"
+    weight: 0.25              # Weight for fusion (0-1)
+    confidence_threshold: 0.25 # Confidence threshold for detections
+  
+  - name: "yolov8s"
+    weight: 0.35
+    confidence_threshold: 0.30
+  
+  - name: "yolov8m"
+    weight: 0.40
+    confidence_threshold: 0.35
+
+# Inference Configuration
+inference:
+  device: "cuda:0"  # GPU device (cuda:0, cuda:1, or cpu)
+  batch_size: 1
+  max_det: 300      # Maximum detections per image
+  img_size: 640     # Input image size
+
+# Detection Fusion Configuration
+fusion:
+  iou_threshold: 0.45           # IoU threshold for grouping detections
+  confidence_weights: "weighted" # Fusion method: weighted, average, max
+  nms_threshold: 0.4            # NMS threshold for final filtering
+
+# Network Configuration
+network:
+  listen_host: "0.0.0.0"  # Interface to listen on
+  listen_port: 5000        # UDP port for receiving frames
+  buffer_size: 65536       # UDP receive buffer size
+
+# REST API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "*"  # Allow all origins (restrict in production)
+  max_history: 100  # Maximum detection history to keep
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "/var/log/wsl-vision/app.log"
+  max_size_mb: 100
+  backup_count: 5

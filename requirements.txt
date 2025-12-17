@@ -1,0 +1,9 @@
+# Distributed Computer Vision System Requirements
+# Use Conda environments instead (see rpi/environment.yml and wsl/environment.yml)
+
+# This file is kept for reference only
+# Install using: conda env create -f rpi/environment.yml (for Raspberry Pi)
+#                conda env create -f wsl/environment.yml (for WSL Server)
+
+# Core dependencies are managed through Conda for better compatibility
+# and easier GPU/CUDA management

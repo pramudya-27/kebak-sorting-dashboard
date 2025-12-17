@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Detection Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #2ecc71;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .status.disconnected {
+            background: #e74c3c;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .video-container {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+        }
+        
+        .video-feed {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #bbb;
+            margin-top: 5px;
+        }
+        
+        .detection-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .detection-item {
+            background: #0f3460;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .detection-item:hover {
+            background: #1a4673;
+        }
+        
+        .detection-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .class-name {
+            font-weight: bold;
+            color: #2ecc71;
+            font-size: 1.1em;
+        }
+        
+        .confidence {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .detection-meta {
+            font-size: 0.85em;
+            color: #bbb;
+        }
+        
+        .model-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #667eea;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-right: 5px;
+        }
+        
+        .chart-container {
+            height: 200px;
+            margin-top: 15px;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+        
+        .timestamp {
+            color: #888;
+            font-size: 0.85em;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0f3460;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 YOLO Multi-Model Detection Dashboard</h1>
+            <p style="margin: 10px 0;">Real-time Object Detection with Fusion Inference</p>
+            <span class="status" id="connectionStatus">Connecting...</span>
+        </header>
+        
+        <div class="video-container">
+            <div class="card">
+                <h2>📹 Camera 0 Feed</h2>
+                <div class="video-feed">
+                    <canvas id="camera0Canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📹 Camera 1 Feed</h2>
+                <div class="video-feed">
+                    <canvas id="camera1Canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📊 System Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalDetections">0</div>
+                        <div class="stat-label">Total Detections</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="currentFPS">0</div>
+                        <div class="stat-label">FPS</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgConfidence">0%</div>
+                        <div class="stat-label">Avg Confidence</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="uptime">0s</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🔍 Latest Detections</h2>
+                <div class="detection-list" id="detectionList">
+                    <div class="no-data">Waiting for detections...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>⚡ Model Performance</h2>
+                <div id="modelStats">
+                    <div class="no-data">Loading model statistics...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📈 Detection Timeline</h2>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const WS_URL = `ws://${window.location.host}/ws/detections`;
+        const API_URL = `http://${window.location.host}/api/v1`;
+        
+        // Global state
+        let ws = null;
+        let latestDetection = null;
+        let detectionCount = 0;
+        let detectionHistory = [];
+        const MAX_HISTORY = 100;
+        
+        // Canvas contexts
+        const camera0Canvas = document.getElementById('camera0Canvas');
+        const camera1Canvas = document.getElementById('camera1Canvas');
+        const ctx0 = camera0Canvas.getContext('2d');
+        const ctx1 = camera1Canvas.getContext('2d');
+        
+        // Initialize WebSocket connection
+        function connectWebSocket() {
+            console.log('Connecting to WebSocket...');
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                
+                // Send keepalive every 20 seconds
+                setInterval(() => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send('ping');
+                    }
+                }, 20000);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type !== 'keepalive') {
+                        handleDetection(data);
+                    }
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                // Reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        // Update connection status indicator
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.classList.remove('disconnected');
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.classList.add('disconnected');
+            }
+        }
+        
+        // Handle incoming detection
+        function handleDetection(detection) {
+            latestDetection = detection;
+            detectionCount++;
+            
+            // Add to history
+            detectionHistory.push(detection);
+            if (detectionHistory.length > MAX_HISTORY) {
+                detectionHistory.shift();
+            }
+            
+            // Update UI
+            updateDetectionList(detection);
+            updateStatistics();
+            drawDetections(detection);
+        }
+        
+        // Update detection list
+        function updateDetectionList(detection) {
+            const listEl = document.getElementById('detectionList');
+            const detections = detection.fused_detections || [];
+            
+            if (detections.length === 0) {
+                listEl.innerHTML = '<div class="no-data">No objects detected</div>';
+                return;
+            }
+            
+            listEl.innerHTML = '';
+            detections.slice(0, 10).forEach(det => {
+                const item = document.createElement('div');
+                item.className = 'detection-item';
+                
+                const models = det.models || [det.model];
+                const modelBadges = models.map(m => 
+                    `<span class="model-badge">${m}</span>`
+                ).join('');
+                
+                item.innerHTML = `
+                    <div class="detection-header">
+                        <span class="class-name">${det.class_name}</span>
+                        <span class="confidence">${(det.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="detection-meta">
+                        ${modelBadges}
+                        ${det.num_models ? `<span>| ${det.num_models} models</span>` : ''}
+                    </div>
+                `;
+                
+                listEl.appendChild(item);
+            });
+        }
+        
+        // Update statistics display
+        function updateStatistics() {
+            document.getElementById('totalDetections').textContent = detectionCount;
+            
+            // Calculate FPS
+            if (latestDetection) {
+                const fps = latestDetection.inference_time ? 
+                    (1 / latestDetection.inference_time).toFixed(1) : '0';
+                document.getElementById('currentFPS').textContent = fps;
+                
+                // Average confidence
+                const detections = latestDetection.fused_detections || [];
+                if (detections.length > 0) {
+                    const avgConf = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
+                    document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(1) + '%';
+                }
+            }
+            
+            // Fetch system stats
+            fetch(`${API_URL}/stats`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.detection) {
+                        document.getElementById('uptime').textContent = 
+                            formatUptime(data.detection.uptime_seconds);
+                    }
+                    if (data.system) {
+                        updateModelStats(data.system);
+                    }
+                })
+                .catch(err => console.error('Error fetching stats:', err));
+        }
+        
+        // Draw detections on canvas
+        function drawDetections(detection) {
+            const detections = detection.fused_detections || [];
+            
+            // Draw on camera 0 (assuming detections apply to camera 0)
+            if (camera0Canvas.width === 0) {
+                camera0Canvas.width = 640;
+                camera0Canvas.height = 480;
+            }
+            
+            // Clear canvas
+            ctx0.fillStyle = '#000';
+            ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
+            
+            // Draw detections
+            detections.forEach(det => {
+                const [x1, y1, x2, y2] = det.bbox;
+                
+                // Draw bounding box
+                ctx0.strokeStyle = '#2ecc71';
+                ctx0.lineWidth = 3;
+                ctx0.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                
+                // Draw label
+                const label = `${det.class_name} ${(det.confidence * 100).toFixed(0)}%`;
+                ctx0.fillStyle = '#2ecc71';
+                ctx0.fillRect(x1, y1 - 25, ctx0.measureText(label).width + 10, 25);
+                ctx0.fillStyle = '#000';
+                ctx0.font = '16px sans-serif';
+                ctx0.fillText(label, x1 + 5, y1 - 7);
+            });
+        }
+        
+        // Update model statistics
+        function updateModelStats(stats) {
+            const modelStatsEl = document.getElementById('modelStats');
+            
+            if (!stats.models || stats.models.length === 0) {
+                modelStatsEl.innerHTML = '<div class="no-data">No model statistics available</div>';
+                return;
+            }
+            
+            modelStatsEl.innerHTML = '';
+            stats.models.forEach(model => {
+                const statItem = document.createElement('div');
+                statItem.className = 'stat-item';
+                statItem.style.marginBottom = '10px';
+                statItem.innerHTML = `
+                    <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">
+                        ${model.model_name}
+                    </div>
+                    <div style="font-size: 0.9em;">
+                        Inference: ${model.avg_inference_time_ms?.toFixed(1) || 0}ms<br>
+                        Detections: ${model.total_detections || 0}
+                    </div>
+                `;
+                modelStatsEl.appendChild(statItem);
+            });
+        }
+        
+        // Format uptime
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${secs}s`;
+            } else {
+                return `${secs}s`;
+            }
+        }
+        
+        // Initialize dashboard
+        function init() {
+            console.log('Initializing dashboard...');
+            connectWebSocket();
+            
+            // Update statistics periodically
+            setInterval(updateStatistics, 5000);
+        }
+        
+        // Start dashboard when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
