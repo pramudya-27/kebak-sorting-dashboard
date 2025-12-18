@@ -202,21 +202,21 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎯 YOLO Multi-Model Detection Dashboard</h1>
+            <h1>YOLO Multi-Model Detection Dashboard</h1>
             <p style="margin: 10px 0;">Real-time Object Detection with Fusion Inference</p>
             <span class="status" id="connectionStatus">Connecting...</span>
         </header>
         
         <div class="video-container">
             <div class="card">
-                <h2>📹 Camera 0 Feed</h2>
+                <h2>Camera 0 Feed</h2>
                 <div class="video-feed">
                     <canvas id="camera0Canvas"></canvas>
                 </div>
             </div>
             
             <div class="card">
-                <h2>📹 Camera 1 Feed</h2>
+                <h2>Camera 1 Feed</h2>
                 <div class="video-feed">
                     <canvas id="camera1Canvas"></canvas>
                 </div>
@@ -269,10 +269,12 @@
         </div>
     </div>
 
+
+
     <script>
         // Configuration
-        const WS_URL = `ws://${window.location.host}/ws/detections`;
-        const API_URL = `http://${window.location.host}/api/v1`;
+        const WS_URL = 'ws://localhost:8000/ws/detections';
+        const API_URL = 'http://localhost:8000/api/v1';
         
         // Global state
         let ws = null;
@@ -425,37 +427,110 @@
                 .catch(err => console.error('Error fetching stats:', err));
         }
         
-        // Draw detections on canvas
-        function drawDetections(detection) {
-            const detections = detection.fused_detections || [];
-            
-            // Draw on camera 0 (assuming detections apply to camera 0)
-            if (camera0Canvas.width === 0) {
-                camera0Canvas.width = 640;
-                camera0Canvas.height = 480;
+        // Draw detections on canvas (improved: supports frames and canvas resizing)
+        function resizeCanvasToDisplaySize(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const width = Math.floor(canvas.clientWidth * dpr);
+            const height = Math.floor(canvas.clientHeight * dpr);
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
             }
-            
-            // Clear canvas
-            ctx0.fillStyle = '#000';
-            ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
-            
-            // Draw detections
+        }
+
+        function drawImageFromBase64(canvas, ctx, base64, callback) {
+            const img = new Image();
+            img.onload = () => {
+                resizeCanvasToDisplaySize(canvas);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                if (callback) callback();
+            };
+            img.onerror = () => {
+                // If image load fails still call callback so boxes can be drawn on blank canvas
+                if (callback) callback();
+            };
+            img.src = 'data:image/jpeg;base64,' + base64;
+        }
+
+        function drawBoxesOnCtx(ctx, detections, scaleX = 1, scaleY = 1) {
+            // Choose a font size that respects devicePixelRatio for crisp text
+            const dpr = window.devicePixelRatio || 1;
+            ctx.font = `${Math.max(12, Math.round(14 * dpr))}px sans-serif`;
+            ctx.textBaseline = 'top';
+
             detections.forEach(det => {
                 const [x1, y1, x2, y2] = det.bbox;
-                
+                const rx = x1 * scaleX;
+                const ry = y1 * scaleY;
+                const rw = (x2 - x1) * scaleX;
+                const rh = (y2 - y1) * scaleY;
+
                 // Draw bounding box
-                ctx0.strokeStyle = '#2ecc71';
-                ctx0.lineWidth = 3;
-                ctx0.strokeRect(x1, y1, x2 - x1, y2 - y1);
-                
-                // Draw label
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = Math.max(2, Math.round(3 * dpr));
+                ctx.strokeRect(rx, ry, rw, rh);
+
+                // Draw label background and text
                 const label = `${det.class_name} ${(det.confidence * 100).toFixed(0)}%`;
-                ctx0.fillStyle = '#2ecc71';
-                ctx0.fillRect(x1, y1 - 25, ctx0.measureText(label).width + 10, 25);
-                ctx0.fillStyle = '#000';
-                ctx0.font = '16px sans-serif';
-                ctx0.fillText(label, x1 + 5, y1 - 7);
+                const padding = 6 * dpr;
+                const textWidth = ctx.measureText(label).width;
+                const textHeight = parseInt(ctx.font, 10) || Math.round(14 * dpr);
+
+                const bgX = rx;
+                const bgY = Math.max(ry - textHeight - padding, 0);
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(bgX, bgY, textWidth + padding * 2, textHeight + padding);
+
+                ctx.fillStyle = '#000';
+                ctx.fillText(label, bgX + padding, bgY + (padding / 2));
             });
+        }
+
+        function drawDetections(detection) {
+            const detections = detection.fused_detections || [];
+
+            // Resize canvases to match display size (handles HiDPI screens)
+            resizeCanvasToDisplaySize(camera0Canvas);
+            resizeCanvasToDisplaySize(camera1Canvas);
+
+            // Compute scaling if frame dimensions are provided in the message
+            const frameW = detection.frame_width || detection.frame_width_px || null;
+            const frameH = detection.frame_height || detection.frame_height_px || null;
+            const scaleX = frameW ? (camera0Canvas.width / frameW) : 1;
+            const scaleY = frameH ? (camera0Canvas.height / frameH) : 1;
+
+            // Helper to draw boxes after (or without) an image
+            const drawBoxesCallback = () => {
+                // If we have no image we should clear the canvas first
+                if (!detection.frame_base64 && !(detection.camera_frames && detection.camera_frames[0])) {
+                    ctx0.fillStyle = '#000';
+                    ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
+                }
+                if (detections.length > 0) {
+                    drawBoxesOnCtx(ctx0, detections, scaleX, scaleY);
+                }
+            };
+
+            // Draw camera0 frame if present (supports detection.frame_base64 or detection.camera_frames[0])
+            if (detection.frame_base64) {
+                drawImageFromBase64(camera0Canvas, ctx0, detection.frame_base64, drawBoxesCallback);
+            } else if (detection.camera_frames && detection.camera_frames[0]) {
+                drawImageFromBase64(camera0Canvas, ctx0, detection.camera_frames[0], drawBoxesCallback);
+            } else {
+                // No frame: clear and draw boxes on black background
+                ctx0.fillStyle = '#000';
+                ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
+                drawBoxesCallback();
+            }
+
+            // Draw camera1 frame if present
+            if (detection.camera_frames && detection.camera_frames[1]) {
+                drawImageFromBase64(camera1Canvas, ctx1, detection.camera_frames[1]);
+            } else {
+                // Ensure camera1 is cleared when no frame
+                ctx1.fillStyle = '#000';
+                ctx1.fillRect(0, 0, camera1Canvas.width, camera1Canvas.height);
+            }
         }
         
         // Update model statistics
@@ -503,10 +578,22 @@
         // Initialize dashboard
         function init() {
             console.log('Initializing dashboard...');
+
+            // Ensure canvases are sized correctly for display (handles HiDPI)
+            resizeCanvasToDisplaySize(camera0Canvas);
+            resizeCanvasToDisplaySize(camera1Canvas);
+
             connectWebSocket();
-            
+
             // Update statistics periodically
             setInterval(updateStatistics, 5000);
+
+            // Redraw overlays when window is resized so boxes stay aligned with frames
+            window.addEventListener('resize', () => {
+                resizeCanvasToDisplaySize(camera0Canvas);
+                resizeCanvasToDisplaySize(camera1Canvas);
+                if (latestDetection) drawDetections(latestDetection);
+            });
         }
         
         // Start dashboard when page loads

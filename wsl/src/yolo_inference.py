@@ -326,7 +326,7 @@ if __name__ == "__main__":
             },
             {
                 'name': 'health_detector',
-                'path': 'machine/DeteksiKesehatanKepiting/YOLO11 health specific/YOLO11 health specific/best.pt',
+                'path': 'machine/DeteksiKesehatanKepiting/YOLO11_health_specific/best.pt',
                 'weight': 0.34,
                 'confidence_threshold': 0.25,
                 'task': 'detection'

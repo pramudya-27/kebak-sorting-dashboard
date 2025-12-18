@@ -109,7 +109,7 @@ class WSLVisionSystem:
                 },
                 {
                     'name': 'health_detector',
-                    'path': 'machine/DeteksiKesehatanKepiting/YOLO11 health specific/YOLO11 health specific/best.pt',
+                    'path': 'machine/DeteksiKesehatanKepiting/YOLO11_health_specific/best.pt',
                     'weight': 0.34,
                     'confidence_threshold': 0.25,
                     'task': 'detection'
@@ -174,8 +174,25 @@ class WSLVisionSystem:
         """
         try:
             api_config = self.config.get('api', {})
+
+            # Get the FastAPI app from APIServer and mount the static files
+            app = self.api_server.get_app()
+
+            # Mount static directory and root dashboard (if present)
+            try:
+                from fastapi.staticfiles import StaticFiles
+                from pathlib import Path
+
+                static_dir = Path(__file__).parent / "static"
+                if static_dir.exists():
+                    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+                    # Mounting root to serve single page app (dashboard)
+                    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="dashboard")
+            except Exception as _e:
+                logger.warning(f"Failed to mount static files: {_e}")
+
             uvicorn.run(
-                self.api_server.get_app(),
+                app,
                 host=api_config.get('host', '0.0.0.0'),
                 port=api_config.get('port', 8000),
                 log_level="info"

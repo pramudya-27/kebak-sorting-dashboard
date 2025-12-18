@@ -8,10 +8,9 @@ import struct
 import time
 import threading
 import logging
-import queue
 import pickle
 import zlib
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable
 from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO)
@@ -23,21 +22,23 @@ class FrameAssembler:
     Assembles fragmented frames from UDP packets
     """
     
-    def __init__(self, timeout: float = 2.0):
+    def __init__(self, timeout: float = 2.0, callback: Optional[Callable] = None):
         """
         Initialize frame assembler
         
         Args:
             timeout: Time to wait for missing chunks before discarding
+            callback: Function to call when frame is complete (receives package dict)
         """
         self.timeout = timeout
+        self.frame_callback = callback
         self.frames = defaultdict(lambda: {
             'chunks': {},
             'total_chunks': 0,
             'first_seen': 0,
             'complete': False
         })
-        self.completed_frames = queue.Queue(maxsize=100)
+        self.lock = threading.Lock()
         
         # Statistics
         self.total_frames_received = 0
@@ -98,18 +99,22 @@ class FrameAssembler:
             package['frame_id'] = frame_id
             package['assembly_time'] = time.time() - frame['first_seen']
             
-            # Add to completed queue
-            try:
-                self.completed_frames.put(package, block=False)
-                frame['complete'] = True
-                self.total_frames_received += 1
-                
-                # Clean up
-                del self.frames[frame_id]
-                
-            except queue.Full:
-                logger.warning(f"Completed frames queue full, dropping frame {frame_id}")
-                self.total_frames_dropped += 1
+            # Call callback with completed frame
+            frame['complete'] = True
+            self.total_frames_received += 1
+            
+            # Clean up
+            del self.frames[frame_id]
+            
+            # Invoke callback if set (outside lock for better performance)
+            if self.frame_callback:
+                try:
+                    self.frame_callback(package)
+                except Exception as e:
+                    logger.error(f"Error in frame callback: {e}")
+                    self.total_frames_dropped += 1
+            else:
+                logger.warning(f"No callback set, frame {frame_id} assembled but not processed")
                 
         except Exception as e:
             logger.error(f"Error assembling frame {frame_id}: {e}")
@@ -132,21 +137,6 @@ class FrameAssembler:
             del self.frames[frame_id]
             self.total_frames_dropped += 1
     
-    def get_frame(self, timeout: float = 1.0) -> Optional[dict]:
-        """
-        Get next completed frame
-        
-        Args:
-            timeout: Maximum time to wait
-            
-        Returns:
-            dict: Frame package or None
-        """
-        try:
-            return self.completed_frames.get(timeout=timeout)
-        except queue.Empty:
-            return None
-    
     def get_stats(self) -> dict:
         """
         Get assembler statistics
@@ -158,8 +148,7 @@ class FrameAssembler:
             'frames_received': self.total_frames_received,
             'frames_dropped': self.total_frames_dropped,
             'chunks_received': self.total_chunks_received,
-            'pending_frames': len(self.frames),
-            'queue_size': self.completed_frames.qsize()
+            'pending_frames': len(self.frames)
         }
 
 
@@ -187,12 +176,16 @@ class UDPReceiver:
         self.sock = None
         self.running = False
         
-        # Frame assembler
-        self.assembler = FrameAssembler(timeout=2.0)
+        # Frame assembler with callback
+        self.assembler = FrameAssembler(timeout=2.0, callback=self._handle_completed_frame)
         
         # Receiver thread
         self.receive_thread = None
         self.cleanup_thread = None
+        
+        # Frame buffer for external access (optional)
+        self.latest_frame = None
+        self.frame_lock = threading.Lock()
         
         # Statistics
         self.packets_received = 0
@@ -341,17 +334,32 @@ class UDPReceiver:
             except Exception as e:
                 logger.error(f"Error in cleanup loop: {e}")
     
-    def get_frame(self, timeout: float = 1.0) -> Optional[dict]:
+    def _handle_completed_frame(self, package: dict):
         """
-        Get next received frame
+        Handle a completed frame from assembler
         
         Args:
-            timeout: Maximum time to wait
+            package: Completed frame package
+        """
+        with self.frame_lock:
+            self.latest_frame = package
+        logger.debug(f"Frame {package['frame_id']} ready, assembly time: {package['assembly_time']*1000:.1f}ms")
+    
+    def get_frame(self, timeout: float = 1.0) -> Optional[dict]:
+        """
+        Get latest received frame (non-blocking)
+        Note: Returns the most recent frame and clears it
+        
+        Args:
+            timeout: Not used (kept for API compatibility)
             
         Returns:
             dict: Frame package or None
         """
-        return self.assembler.get_frame(timeout=timeout)
+        with self.frame_lock:
+            frame = self.latest_frame
+            self.latest_frame = None
+            return frame
     
     def get_stats(self) -> dict:
         """
@@ -388,13 +396,17 @@ if __name__ == "__main__":
             logger.info("Receiver started, waiting for frames...")
             
             while True:
-                frame = receiver.get_frame(timeout=5.0)
+                time.sleep(1.0)  # Check every second
+                frame = receiver.get_frame()
                 if frame:
                     logger.info(f"Received frame {frame['frame_id']}, "
                               f"assembly time: {frame['assembly_time']*1000:.1f}ms")
                     logger.info(f"Stats: {receiver.get_stats()}")
                 else:
-                    logger.info("No frame received (timeout)")
+                    # Just show stats periodically
+                    stats = receiver.get_stats()
+                    if stats['packets_received'] > 0:
+                        logger.info(f"Stats: {stats}")
                     
         except KeyboardInterrupt:
             logger.info("Interrupted")
