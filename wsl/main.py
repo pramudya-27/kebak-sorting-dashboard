@@ -224,6 +224,10 @@ class WSLVisionSystem:
             frame_package: Frame package from UDP receiver
         """
         try:
+            import cv2
+            import numpy as np
+            import base64
+            
             # Extract frame metadata
             frame_id = frame_package.get('frame_id', 0)
             compressed_package = frame_package.get('compressed_package', {})
@@ -232,20 +236,25 @@ class WSLVisionSystem:
             # For simplicity, process camera 0 frame
             # In production, could process both cameras
             camera0_data = compressed_package.get('camera0')
+            camera1_data = compressed_package.get('camera1')
             
             if camera0_data is None:
                 logger.warning(f"No camera data in frame {frame_id}")
                 return
             
-            # Decompress frame
-            import cv2
-            import numpy as np
+            # Decompress camera 0 frame
             nparr = np.frombuffer(camera0_data, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
             if frame is None:
                 logger.error(f"Failed to decode frame {frame_id}")
                 return
+            
+            # Decompress camera 1 frame if available
+            frame_camera1 = None
+            if camera1_data is not None:
+                nparr1 = np.frombuffer(camera1_data, np.uint8)
+                frame_camera1 = cv2.imdecode(nparr1, cv2.IMREAD_COLOR)
             
             # Run multi-model inference
             inference_start = time.time()
@@ -259,6 +268,16 @@ class WSLVisionSystem:
             )
             fusion_time = time.time() - fusion_start
             
+            # Encode frames to base64 for WebSocket transmission
+            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            frame_base64_camera0 = base64.b64encode(buffer).decode('utf-8')
+            
+            camera_frames = [frame_base64_camera0]
+            if frame_camera1 is not None:
+                _, buffer1 = cv2.imencode('.jpg', frame_camera1, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                frame_base64_camera1 = base64.b64encode(buffer1).decode('utf-8')
+                camera_frames.append(frame_base64_camera1)
+            
             # Create result package
             result = {
                 'frame_id': frame_id,
@@ -268,7 +287,10 @@ class WSLVisionSystem:
                 'inference_time': inference_time,
                 'fusion_time': fusion_time,
                 'total_time': inference_time + fusion_time,
-                'models': inference_results['num_models']
+                'models': inference_results['num_models'],
+                'frame_width': frame.shape[1],
+                'frame_height': frame.shape[0],
+                'camera_frames': camera_frames
             }
             
             # Send to API

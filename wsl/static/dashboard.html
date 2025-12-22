@@ -12,7 +12,7 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
             background: #1a1a2e;
             color: #eee;
             padding: 20px;
@@ -225,7 +225,7 @@
         
         <div class="grid">
             <div class="card">
-                <h2>📊 System Statistics</h2>
+                <h2>System Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value" id="totalDetections">0</div>
@@ -247,21 +247,21 @@
             </div>
             
             <div class="card">
-                <h2>🔍 Latest Detections</h2>
+                <h2>Latest Detections</h2>
                 <div class="detection-list" id="detectionList">
                     <div class="no-data">Waiting for detections...</div>
                 </div>
             </div>
             
             <div class="card">
-                <h2>⚡ Model Performance</h2>
+                <h2>Model Performance</h2>
                 <div id="modelStats">
                     <div class="no-data">Loading model statistics...</div>
                 </div>
             </div>
             
             <div class="card">
-                <h2>📈 Detection Timeline</h2>
+                <h2>Detection Timeline</h2>
                 <div class="chart-container">
                     <canvas id="timelineChart"></canvas>
                 </div>
@@ -309,6 +309,20 @@
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+
+                    // Debug: show brief summary of incoming message
+                    console.debug('WS message summary', {
+                        type: data.type,
+                        fused: (data.fused_detections || []).length,
+                        has_frame: !!(data.frame_base64 || (data.camera_frames && data.camera_frames[0]))
+                    });
+
+                    if (data.frame_base64) {
+                        console.debug('frame_base64 length:', data.frame_base64.length);
+                    } else if (data.camera_frames && data.camera_frames[0]) {
+                        console.debug('camera_frames[0] length:', data.camera_frames[0].length, 'camera_frames[1] length:', data.camera_frames[1]?.length);
+                    }
+
                     if (data.type !== 'keepalive') {
                         handleDetection(data);
                     }
@@ -438,18 +452,31 @@
             }
         }
 
-        function drawImageFromBase64(canvas, ctx, base64, callback) {
+        function drawImageFromBase64(canvas, ctx, base64OrDataUri, callback) {
             const img = new Image();
             img.onload = () => {
                 resizeCanvasToDisplaySize(canvas);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                console.debug('Image drawn on canvas', {canvas: canvas.id, width: canvas.width, height: canvas.height});
                 if (callback) callback();
             };
-            img.onerror = () => {
+            img.onerror = (err) => {
                 // If image load fails still call callback so boxes can be drawn on blank canvas
+                console.error('Failed to load image for', canvas.id, err);
                 if (callback) callback();
             };
-            img.src = 'data:image/jpeg;base64,' + base64;
+
+            // Accept either a full data URI or plain base64
+            try {
+                if (typeof base64OrDataUri === 'string' && base64OrDataUri.startsWith('data:')) {
+                    img.src = base64OrDataUri;
+                } else {
+                    img.src = 'data:image/jpeg;base64,' + base64OrDataUri;
+                }
+            } catch (e) {
+                console.error('Error setting image src for', canvas.id, e);
+                if (callback) callback();
+            }
         }
 
         function drawBoxesOnCtx(ctx, detections, scaleX = 1, scaleY = 1) {
