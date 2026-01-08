@@ -95,14 +95,14 @@ class WSLVisionSystem:
             'models': [
                 {
                     'name': 'gender_detector',
-                    'path': 'machine/DeteksiGenderKepiting/yolo11m.pt',
+                    'path': 'machine/DeteksiGenderKepiting/best.pt',
                     'weight': 0.33,
                     'confidence_threshold': 0.25,
                     'task': 'detection'
                 },
                 {
                     'name': 'kelengkapan_seg',
-                    'path': 'machine/DeteksiKelengkapanTubuhKepiting/FIKS YOLO SEG-V8/yolov8n-seg.pt',
+                    'path': 'machine/DeteksiKelengkapanTubuhKepiting/FIKS YOLO SEG-V8/best.pt',
                     'weight': 0.33,
                     'confidence_threshold': 0.25,
                     'task': 'segmentation'
@@ -244,10 +244,10 @@ class WSLVisionSystem:
             
             # Decompress camera 0 frame
             nparr = np.frombuffer(camera0_data, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            frame_camera0 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
-            if frame is None:
-                logger.error(f"Failed to decode frame {frame_id}")
+            if frame_camera0 is None:
+                logger.error(f"Failed to decode frame {frame_id} from camera 0")
                 return
             
             # Decompress camera 1 frame if available
@@ -256,20 +256,41 @@ class WSLVisionSystem:
                 nparr1 = np.frombuffer(camera1_data, np.uint8)
                 frame_camera1 = cv2.imdecode(nparr1, cv2.IMREAD_COLOR)
             
-            # Run multi-model inference
+            # Camera 0: Run health and completeness detection models
             inference_start = time.time()
-            inference_results = self.inference_engine.predict_parallel(frame)
+            camera0_models = ['health_detector', 'kelengkapan_seg']
+            camera0_results = self.inference_engine.predict_parallel(
+                frame_camera0, 
+                model_filter=camera0_models
+            )
+            
+            # Camera 1: Run gender detection model (if frame available)
+            camera1_results = None
+            if frame_camera1 is not None:
+                camera1_results = self.inference_engine.predict_parallel(
+                    frame_camera1,
+                    model_filter=['gender_detector']
+                )
+            
             inference_time = time.time() - inference_start
             
-            # Fuse detections
+            # Fuse detections for camera 0
             fusion_start = time.time()
-            fused_detections = self.fusion_engine.fuse_detections(
-                inference_results['frame_results']
+            camera0_fused = self.fusion_engine.fuse_detections(
+                camera0_results['frame_results']
             )
+            
+            # Fuse detections for camera 1 (if available)
+            camera1_fused = []
+            if camera1_results is not None:
+                camera1_fused = self.fusion_engine.fuse_detections(
+                    camera1_results['frame_results']
+                )
+            
             fusion_time = time.time() - fusion_start
             
             # Encode frames to base64 for WebSocket transmission
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            _, buffer = cv2.imencode('.jpg', frame_camera0, [cv2.IMWRITE_JPEG_QUALITY, 85])
             frame_base64_camera0 = base64.b64encode(buffer).decode('utf-8')
             
             camera_frames = [frame_base64_camera0]
@@ -278,18 +299,25 @@ class WSLVisionSystem:
                 frame_base64_camera1 = base64.b64encode(buffer1).decode('utf-8')
                 camera_frames.append(frame_base64_camera1)
             
-            # Create result package
+            # Create result package with separate camera detections
             result = {
                 'frame_id': frame_id,
                 'timestamp': metadata.get('timestamp'),
-                'fused_detections': fused_detections,
-                'num_detections': len(fused_detections),
+                'camera0': {
+                    'detections': camera0_fused,
+                    'num_detections': len(camera0_fused),
+                    'models': ['health_detector', 'kelengkapan_seg']
+                },
+                'camera1': {
+                    'detections': camera1_fused,
+                    'num_detections': len(camera1_fused),
+                    'models': ['gender_detector']
+                },
                 'inference_time': inference_time,
                 'fusion_time': fusion_time,
                 'total_time': inference_time + fusion_time,
-                'models': inference_results['num_models'],
-                'frame_width': frame.shape[1],
-                'frame_height': frame.shape[0],
+                'frame_width': frame_camera0.shape[1],
+                'frame_height': frame_camera0.shape[0],
                 'camera_frames': camera_frames
             }
             

@@ -313,7 +313,8 @@
                     // Debug: show brief summary of incoming message
                     console.debug('WS message summary', {
                         type: data.type,
-                        fused: (data.fused_detections || []).length,
+                        camera0_dets: (data.camera0?.detections || data.fused_detections || []).length,
+                        camera1_dets: (data.camera1?.detections || []).length,
                         has_frame: !!(data.frame_base64 || (data.camera_frames && data.camera_frames[0]))
                     });
 
@@ -376,7 +377,10 @@
         // Update detection list
         function updateDetectionList(detection) {
             const listEl = document.getElementById('detectionList');
-            const detections = detection.fused_detections || [];
+            // Support both old format (fused_detections) and new format (camera0/camera1)
+            const camera0Dets = detection.camera0?.detections || [];
+            const camera1Dets = detection.camera1?.detections || [];
+            const detections = detection.fused_detections || [...camera0Dets, ...camera1Dets];
             
             if (detections.length === 0) {
                 listEl.innerHTML = '<div class="no-data">No objects detected</div>';
@@ -419,7 +423,9 @@
                 document.getElementById('currentFPS').textContent = fps;
                 
                 // Average confidence
-                const detections = latestDetection.fused_detections || [];
+                const camera0Dets = latestDetection.camera0?.detections || [];
+                const camera1Dets = latestDetection.camera1?.detections || [];
+                const detections = latestDetection.fused_detections || [...camera0Dets, ...camera1Dets];
                 if (detections.length > 0) {
                     const avgConf = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
                     document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(1) + '%';
@@ -514,7 +520,9 @@
         }
 
         function drawDetections(detection) {
-            const detections = detection.fused_detections || [];
+            // Get detections for each camera separately
+            const camera0Dets = detection.camera0?.detections || detection.fused_detections || [];
+            const camera1Dets = detection.camera1?.detections || [];
 
             // Resize canvases to match display size (handles HiDPI screens)
             resizeCanvasToDisplaySize(camera0Canvas);
@@ -533,8 +541,15 @@
                     ctx0.fillStyle = '#000';
                     ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
                 }
-                if (detections.length > 0) {
-                    drawBoxesOnCtx(ctx0, detections, scaleX, scaleY);
+                if (camera0Dets.length > 0) {
+                    drawBoxesOnCtx(ctx0, camera0Dets, scaleX, scaleY);
+                }
+            };
+            
+            // Helper for camera1 boxes
+            const drawBoxesCallback1 = () => {
+                if (camera1Dets.length > 0) {
+                    drawBoxesOnCtx(ctx1, camera1Dets, scaleX, scaleY);
                 }
             };
 
@@ -550,13 +565,17 @@
                 drawBoxesCallback();
             }
 
-            // Draw camera1 frame if present
+            // Draw camera1 frame if present with detections
             if (detection.camera_frames && detection.camera_frames[1]) {
-                drawImageFromBase64(camera1Canvas, ctx1, detection.camera_frames[1]);
+                drawImageFromBase64(camera1Canvas, ctx1, detection.camera_frames[1], drawBoxesCallback1);
             } else {
                 // Ensure camera1 is cleared when no frame
                 ctx1.fillStyle = '#000';
                 ctx1.fillRect(0, 0, camera1Canvas.width, camera1Canvas.height);
+                // Still draw boxes if we have detections but no frame
+                if (camera1Dets.length > 0) {
+                    drawBoxesCallback1();
+                }
             }
         }
         

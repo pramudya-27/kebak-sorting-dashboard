@@ -239,21 +239,30 @@ class MultiModelInference:
         
         logger.info(f"MultiModelInference initialized with {len(self.models)} models")
     
-    def predict_parallel(self, frame: np.ndarray) -> Dict:
+    def predict_parallel(self, frame: np.ndarray, model_filter: List[str] = None) -> Dict:
         """
-        Run parallel inference on all models
+        Run parallel inference on all models or specific models
         
         Args:
             frame: Input frame
+            model_filter: Optional list of model names to run (runs all if None)
             
         Returns:
             dict: Combined results from all models
         """
         start_time = time.time()
         
+        # Filter models if requested
+        models_to_run = self.models
+        if model_filter is not None:
+            models_to_run = [m for m in self.models if m.model_name in model_filter]
+            if not models_to_run:
+                logger.warning(f"No models matched filter: {model_filter}")
+                models_to_run = self.models
+        
         # Submit inference tasks
         futures = {}
-        for model in self.models:
+        for model in models_to_run:
             future = self.executor.submit(model.predict, frame)
             futures[future] = model.model_name
         
@@ -312,14 +321,14 @@ if __name__ == "__main__":
         'models': [
             {
                 'name': 'gender_detector',
-                'path': 'machine/DeteksiGenderKepiting/yolo11m.pt',
+                'path': 'machine/DeteksiGenderKepiting/best.pt',
                 'weight': 0.33,
                 'confidence_threshold': 0.25,
                 'task': 'detection'
             },
             {
                 'name': 'kelengkapan_seg',
-                'path': 'machine/DeteksiKelengkapanTubuhKepiting/FIKS YOLO SEG-V8/yolov8n-seg.pt',
+                'path': 'machine/DeteksiKelengkapanTubuhKepiting/FIKS YOLO SEG-V8/best.pt',
                 'weight': 0.33,
                 'confidence_threshold': 0.25,
                 'task': 'segmentation'
