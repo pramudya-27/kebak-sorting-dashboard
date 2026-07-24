@@ -1,9 +1,15 @@
-# Distributed Computer Vision System Requirements
-# Use Conda environments instead (see rpi/environment.yml and wsl/environment.yml)
+torch>=2.0.0
+torchvision
+numpy>=1.21.0
+opencv-python
+scipy
+ultralytics>=8.0.0
 
-# This file is kept for reference only
-# Install using: conda env create -f rpi/environment.yml (for Raspberry Pi)
-#                conda env create -f wsl/environment.yml (for WSL Server)
+# --- Web Server & API ---
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
 
-# Core dependencies are managed through Conda for better compatibility
-# and easier GPU/CUDA management
+# --- Configuration & Utilities ---
+pyyaml
+pyaml>=21.0.0
