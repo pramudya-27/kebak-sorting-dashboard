@@ -1,0 +1,4 @@
+Machine/**/*.pt filter=lfs diff=lfs merge=lfs -text
+Machine/**/*.onnx filter=lfs diff=lfs merge=lfs -text
+Machine/**/*.pkl filter=lfs diff=lfs merge=lfs -text
+Machine/**/*.h5 filter=lfs diff=lfs merge=lfs -text
