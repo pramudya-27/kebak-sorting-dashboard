@@ -2,17 +2,24 @@
 
 # YOLO Models Configuration
 models:
-  - name: "yolov8n"
-    weight: 0.25              # Weight for fusion (0-1)
+  - name: "gender_detector"
+    path: "Machine/Deteksi Gender/run_YOLO11m.pt-Split801010/runs/detect/train/weights/best.pt"
+    weight: 0.33              # Weight for fusion (0-1)
     confidence_threshold: 0.25 # Confidence threshold for detections
-  
-  - name: "yolov8s"
-    weight: 0.35
-    confidence_threshold: 0.30
-  
-  - name: "yolov8m"
-    weight: 0.40
-    confidence_threshold: 0.35
+    task: "detection"
+
+  - name: "kelengkapan_seg"
+    path: "Machine/Kelengkapan Tubuh Kepiting Bakau/FIKS YOLO SEG-V8/test.zip"
+    zip_member: "kaggle/working/runs/segment/train4/weights/best.pt"
+    weight: 0.33
+    confidence_threshold: 0.25
+    task: "segmentation"
+
+  - name: "health_detector"
+    path: "Machine/Deteksi kesehatan kepiting/YOLO11 health specific/YOLO11 health specific/best.pt"
+    weight: 0.34
+    confidence_threshold: 0.25
+    task: "detection"
 
 # Inference Configuration
 inference:

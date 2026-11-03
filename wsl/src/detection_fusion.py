@@ -102,8 +102,8 @@ class DetectionFusion:
                 if j in used or j <= i:
                     continue
                 
-                # Check if same class
-                if det1['class_id'] != det2['class_id']:
+                # Check if same class name (class_ids can overlap between different models)
+                if det1['class_name'] != det2['class_name']:
                     continue
                 
                 # Check IoU
@@ -224,17 +224,17 @@ class DetectionFusion:
         if not detections:
             return []
         
-        # Group by class
+        # Group by class_name
         class_groups = {}
         for det in detections:
-            class_id = det['class_id']
-            if class_id not in class_groups:
-                class_groups[class_id] = []
-            class_groups[class_id].append(det)
+            cls_key = det['class_name']
+            if cls_key not in class_groups:
+                class_groups[cls_key] = []
+            class_groups[cls_key].append(det)
         
         # Apply NMS per class
         final_detections = []
-        for class_id, class_dets in class_groups.items():
+        for cls_key, class_dets in class_groups.items():
             # Sort by confidence
             class_dets = sorted(class_dets, key=lambda x: x['confidence'], reverse=True)
             

@@ -117,7 +117,7 @@ class FrameAssembler:
                 logger.warning(f"No callback set, frame {frame_id} assembled but not processed")
                 
         except Exception as e:
-            logger.error(f"Error assembling frame {frame_id}: {e}")
+            logger.debug(f"Error assembling frame {frame_id}: {e}")
             self.total_frames_dropped += 1
     
     def cleanup_old_frames(self):

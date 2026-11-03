@@ -9,6 +9,7 @@ import asyncio
 import signal
 import logging
 import yaml
+import cv2
 import uvicorn
 from pathlib import Path
 from threading import Thread
@@ -19,11 +20,14 @@ from src.detection_fusion import DetectionFusion
 from src.api_server import APIServer
 
 # Setup logging
+log_dir = Path('logs')
+log_dir.mkdir(parents=True, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/var/log/wsl-vision/app.log'),
+        logging.FileHandler(log_dir / 'app.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -95,21 +99,22 @@ class WSLVisionSystem:
             'models': [
                 {
                     'name': 'gender_detector',
-                    'path': 'machine/DeteksiGenderKepiting/best.pt',
+                    'path': 'Machine/Deteksi Gender/run_YOLO11m.pt-Split801010/runs/detect/train/weights/best.pt',
                     'weight': 0.33,
                     'confidence_threshold': 0.25,
                     'task': 'detection'
                 },
                 {
                     'name': 'kelengkapan_seg',
-                    'path': 'machine/DeteksiKelengkapanTubuhKepiting/FIKS YOLO SEG-V8/best.pt',
+                    'path': 'Machine/Kelengkapan Tubuh Kepiting Bakau/FIKS YOLO SEG-V8/test.zip',
+                    'zip_member': 'kaggle/working/runs/segment/train4/weights/best.pt',
                     'weight': 0.33,
                     'confidence_threshold': 0.25,
                     'task': 'segmentation'
                 },
                 {
                     'name': 'health_detector',
-                    'path': 'machine/DeteksiKesehatanKepiting/YOLO11_health_specific/best.pt',
+                    'path': 'Machine/Deteksi kesehatan kepiting/YOLO11 health specific/YOLO11 health specific/best.pt',
                     'weight': 0.34,
                     'confidence_threshold': 0.25,
                     'task': 'detection'
@@ -244,7 +249,7 @@ class WSLVisionSystem:
             
             # Decompress camera 0 frame
             nparr = np.frombuffer(camera0_data, np.uint8)
-            frame_camera0 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            frame_camera0 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)  # type: ignore
             
             if frame_camera0 is None:
                 logger.error(f"Failed to decode frame {frame_id} from camera 0")
@@ -254,22 +259,23 @@ class WSLVisionSystem:
             frame_camera1 = None
             if camera1_data is not None:
                 nparr1 = np.frombuffer(camera1_data, np.uint8)
-                frame_camera1 = cv2.imdecode(nparr1, cv2.IMREAD_COLOR)
+                frame_camera1 = cv2.imdecode(nparr1, cv2.IMREAD_COLOR)  # type: ignore
             
-            # Camera 0: Run health and completeness detection models
+            # Camera 0 (Bawah): Run gender, health, spesies, and completeness detection models
             inference_start = time.time()
-            camera0_models = ['health_detector', 'kelengkapan_seg']
+            camera0_models = ['gender_detector', 'kelengkapan_seg', 'health_detector']
             camera0_results = self.inference_engine.predict_parallel(
                 frame_camera0, 
                 model_filter=camera0_models
             )
             
-            # Camera 1: Run gender detection model (if frame available)
+            # Camera 1 (Atas): Run health and spesies detection models (if frame available)
             camera1_results = None
             if frame_camera1 is not None:
+                camera1_models = ['gender_detector', 'kelengkapan_seg', 'health_detector']
                 camera1_results = self.inference_engine.predict_parallel(
                     frame_camera1,
-                    model_filter=['gender_detector']
+                    model_filter=camera1_models
                 )
             
             inference_time = time.time() - inference_start
@@ -290,12 +296,12 @@ class WSLVisionSystem:
             fusion_time = time.time() - fusion_start
             
             # Encode frames to base64 for WebSocket transmission
-            _, buffer = cv2.imencode('.jpg', frame_camera0, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            _, buffer = cv2.imencode('.jpg', frame_camera0, [cv2.IMWRITE_JPEG_QUALITY, 85])  # type: ignore
             frame_base64_camera0 = base64.b64encode(buffer).decode('utf-8')
             
             camera_frames = [frame_base64_camera0]
             if frame_camera1 is not None:
-                _, buffer1 = cv2.imencode('.jpg', frame_camera1, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                _, buffer1 = cv2.imencode('.jpg', frame_camera1, [cv2.IMWRITE_JPEG_QUALITY, 85])  # type: ignore
                 frame_base64_camera1 = base64.b64encode(buffer1).decode('utf-8')
                 camera_frames.append(frame_base64_camera1)
             
@@ -306,12 +312,12 @@ class WSLVisionSystem:
                 'camera0': {
                     'detections': camera0_fused,
                     'num_detections': len(camera0_fused),
-                    'models': ['health_detector', 'kelengkapan_seg']
+                    'models': ['gender_detector', 'health_detector', 'spesies_detector', 'kelengkapan_seg']
                 },
                 'camera1': {
                     'detections': camera1_fused,
                     'num_detections': len(camera1_fused),
-                    'models': ['gender_detector']
+                    'models': ['health_detector', 'spesies_detector']
                 },
                 'inference_time': inference_time,
                 'fusion_time': fusion_time,
@@ -427,7 +433,7 @@ def main():
     logging.getLogger().setLevel(getattr(logging, args.log_level))
     
     # Create log directory if it doesn't exist
-    Path('/var/log/wsl-vision').mkdir(parents=True, exist_ok=True)
+    Path('logs').mkdir(parents=True, exist_ok=True)
     
     # Create and run system
     try:

@@ -1,649 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YOLO Detection Dashboard</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1920px;
-            margin: 0 auto;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-        }
-        
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .status {
-            display: inline-block;
-            padding: 5px 15px;
-            background: #2ecc71;
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-        
-        .status.disconnected {
-            background: #e74c3c;
-        }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .card {
-            background: #16213e;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-        
-        .card h2 {
-            margin-bottom: 15px;
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-        
-        .video-container {
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-            gap: 20px;
-        }
-        
-        .video-feed {
-            position: relative;
-            background: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            aspect-ratio: 16 / 9;
-        }
-        
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-        
-        .stat-item {
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2ecc71;
-        }
-        
-        .stat-label {
-            font-size: 0.9em;
-            color: #bbb;
-            margin-top: 5px;
-        }
-        
-        .detection-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .detection-item {
-            background: #0f3460;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .detection-item:hover {
-            background: #1a4673;
-        }
-        
-        .detection-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        
-        .class-name {
-            font-weight: bold;
-            color: #2ecc71;
-            font-size: 1.1em;
-        }
-        
-        .confidence {
-            color: #f39c12;
-            font-weight: bold;
-        }
-        
-        .detection-meta {
-            font-size: 0.85em;
-            color: #bbb;
-        }
-        
-        .model-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            background: #667eea;
-            border-radius: 12px;
-            font-size: 0.75em;
-            margin-right: 5px;
-        }
-        
-        .chart-container {
-            height: 200px;
-            margin-top: 15px;
-        }
-        
-        .no-data {
-            text-align: center;
-            color: #888;
-            padding: 40px;
-        }
-        
-        .timestamp {
-            color: #888;
-            font-size: 0.85em;
-        }
-        
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #0f3460;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
-        }
-    </style>
+    <title>Crab Sorting Profiling</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="container">
+        <!-- Header -->
         <header>
-            <h1>YOLO Multi-Model Detection Dashboard</h1>
-            <p style="margin: 10px 0;">Real-time Object Detection with Fusion Inference</p>
-            <span class="status" id="connectionStatus">Connecting...</span>
+            <div class="header-title-box">
+                <div class="ocean-logo">
+                    <i class="fas fa-anchor"></i>
+                </div>
+                <div>
+                    <h1>CRAB SORTING PROFILING</h1>
+                    <div class="subtitle">
+                        <i class="fas fa-microchip"></i> Real-time AI Crab Sorting & Multi-Model YOLO Fusion
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <div class="telemetry-badge">
+                    <i class="fas fa-compass"></i>
+                    <span>DEPTH: <strong id="depthMeter">482 M</strong> | SALINITY: 35.4 PSU</span>
+                </div>
+                
+                <span class="status" id="connectionStatus">Connecting...</span>
+            </div>
         </header>
-        
+
+        <!-- Stats Overview Cards -->
+        <div class="stats-grid-wrapper">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-crosshairs"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalDetections">0</div>
+                    <div class="stat-label">Total Detections</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"
+                    style="color: var(--primary-teal); background: rgba(20, 184, 166, 0.1);">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="currentFPS">0</div>
+                    <div class="stat-label">Processing FPS</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"
+                    style="color: #ea580c; background: rgba(234, 88, 12, 0.1);">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="avgConfidence">0%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"
+                    style="color: #6366f1; background: rgba(99, 102, 241, 0.1);">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="conclusionTime">0s</div>
+                    <div class="stat-label">Waktu Penyimpulan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Feeds Section -->
         <div class="video-container">
             <div class="card">
-                <h2>Camera 0 Feed</h2>
+                <h2>
+                    <span><i class="fas fa-video"></i> CAMERA BAWAH</span>
+                </h2>
                 <div class="video-feed">
+                    <div class="viewport-hud">
+                        <div class="hud-tag">
+                            <div class="rec-dot"></div> FEED 01 ACTIVE
+                        </div>
+                    </div>
                     <canvas id="camera0Canvas"></canvas>
                 </div>
             </div>
-            
+
             <div class="card">
-                <h2>Camera 1 Feed</h2>
+                <h2>
+                    <span><i class="fas fa-video"></i> CAMERA ATAS</span>
+                </h2>
                 <div class="video-feed">
+                    <div class="viewport-hud">
+                        <div class="hud-tag">
+                            <div class="rec-dot"></div> FEED 02 ACTIVE
+                        </div>
+                    </div>
                     <canvas id="camera1Canvas"></canvas>
                 </div>
             </div>
         </div>
-        
-        <div class="grid">
+
+        <!-- Detailed Analytics & Logs -->
+        <div class="grid-layout">
             <div class="card">
-                <h2>System Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalDetections">0</div>
-                        <div class="stat-label">Total Detections</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="currentFPS">0</div>
-                        <div class="stat-label">FPS</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="avgConfidence">0%</div>
-                        <div class="stat-label">Avg Confidence</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="uptime">0s</div>
-                        <div class="stat-label">Uptime</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>Latest Detections</h2>
+                <h2>
+                    <span><i class="fas fa-list-ul"></i> LATEST DETECTIONS</span>
+                    <i class="fas fa-wave-square"></i>
+                </h2>
                 <div class="detection-list" id="detectionList">
-                    <div class="no-data">Waiting for detections...</div>
+                    <div class="no-data">
+                        <i class="fas fa-search-location"></i>
+                        <span>Waiting for detection signals...</span>
+                    </div>
                 </div>
             </div>
-            
+
             <div class="card">
-                <h2>Model Performance</h2>
+                <h2>
+                    <span><i class="fas fa-microchip"></i> MODEL PERFORMANCE</span>
+                    <i class="fas fa-bolt"></i>
+                </h2>
                 <div id="modelStats">
-                    <div class="no-data">Loading model statistics...</div>
+                    <div class="no-data">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading neural model telemetry...</span>
+                    </div>
                 </div>
             </div>
-            
+
             <div class="card">
-                <h2>Detection Timeline</h2>
-                <div class="chart-container">
-                    <canvas id="timelineChart"></canvas>
+                <h2>
+                    <span><i class="fas fa-chart-bar"></i> SORTING SUMMARY</span>
+                    <i class="fas fa-poll"></i>
+                </h2>
+                <div id="currentResultBanner" style="background: rgba(14, 165, 233, 0.15); padding: 1.5rem; border-radius: 8px; border: 2px solid #0ea5e9; text-align: center; margin-bottom: 1rem; transition: all 0.3s ease;">
+                    <div id="currentResultText" style="font-size: 1.8rem; font-weight: 800; color: #0ea5e9; letter-spacing: 1px;">WAITING FOR CRAB...</div>
+                </div>
+                <div class="summary-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 0.5rem 0;">
+                    <div class="summary-item" style="background: rgba(14, 165, 233, 0.1); padding: 1rem; border-radius: 8px; border-left: 3px solid #0ea5e9; transition: all 0.3s ease;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Jantan</div>
+                        <div id="countJantan" style="font-size: 1.75rem; font-weight: 700; color: #f8fafc;">0</div>
+                    </div>
+                    <div class="summary-item" style="background: rgba(236, 72, 153, 0.1); padding: 1rem; border-radius: 8px; border-left: 3px solid #ec4899; transition: all 0.3s ease;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Betina</div>
+                        <div id="countBetina" style="font-size: 1.75rem; font-weight: 700; color: #f8fafc;">0</div>
+                    </div>
+                    <div class="summary-item" style="background: rgba(34, 197, 94, 0.1); padding: 1rem; border-radius: 8px; border-left: 3px solid #22c55e; transition: all 0.3s ease;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Sehat</div>
+                        <div id="countSehat" style="font-size: 1.75rem; font-weight: 700; color: #f8fafc;">0</div>
+                    </div>
+                    <div class="summary-item" style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; border-left: 3px solid #ef4444; transition: all 0.3s ease;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Sakit/Cacat</div>
+                        <div id="countTidakSehat" style="font-size: 1.75rem; font-weight: 700; color: #f8fafc;">0</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-
-
-    <script>
-        // Configuration
-        const WS_URL = 'ws://localhost:8000/ws/detections';
-        const API_URL = 'http://localhost:8000/api/v1';
-        
-        // Global state
-        let ws = null;
-        let latestDetection = null;
-        let detectionCount = 0;
-        let detectionHistory = [];
-        const MAX_HISTORY = 100;
-        
-        // Canvas contexts
-        const camera0Canvas = document.getElementById('camera0Canvas');
-        const camera1Canvas = document.getElementById('camera1Canvas');
-        const ctx0 = camera0Canvas.getContext('2d');
-        const ctx1 = camera1Canvas.getContext('2d');
-        
-        // Initialize WebSocket connection
-        function connectWebSocket() {
-            console.log('Connecting to WebSocket...');
-            ws = new WebSocket(WS_URL);
-            
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                updateConnectionStatus(true);
-                
-                // Send keepalive every 20 seconds
-                setInterval(() => {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send('ping');
-                    }
-                }, 20000);
-            };
-            
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-
-                    // Debug: show brief summary of incoming message
-                    console.debug('WS message summary', {
-                        type: data.type,
-                        camera0_dets: (data.camera0?.detections || data.fused_detections || []).length,
-                        camera1_dets: (data.camera1?.detections || []).length,
-                        has_frame: !!(data.frame_base64 || (data.camera_frames && data.camera_frames[0]))
-                    });
-
-                    if (data.frame_base64) {
-                        console.debug('frame_base64 length:', data.frame_base64.length);
-                    } else if (data.camera_frames && data.camera_frames[0]) {
-                        console.debug('camera_frames[0] length:', data.camera_frames[0].length, 'camera_frames[1] length:', data.camera_frames[1]?.length);
-                    }
-
-                    if (data.type !== 'keepalive') {
-                        handleDetection(data);
-                    }
-                } catch (error) {
-                    console.error('Error parsing message:', error);
-                }
-            };
-            
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                updateConnectionStatus(false);
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket disconnected');
-                updateConnectionStatus(false);
-                // Reconnect after 3 seconds
-                setTimeout(connectWebSocket, 3000);
-            };
-        }
-        
-        // Update connection status indicator
-        function updateConnectionStatus(connected) {
-            const statusEl = document.getElementById('connectionStatus');
-            if (connected) {
-                statusEl.textContent = 'Connected';
-                statusEl.classList.remove('disconnected');
-            } else {
-                statusEl.textContent = 'Disconnected';
-                statusEl.classList.add('disconnected');
-            }
-        }
-        
-        // Handle incoming detection
-        function handleDetection(detection) {
-            latestDetection = detection;
-            detectionCount++;
-            
-            // Add to history
-            detectionHistory.push(detection);
-            if (detectionHistory.length > MAX_HISTORY) {
-                detectionHistory.shift();
-            }
-            
-            // Update UI
-            updateDetectionList(detection);
-            updateStatistics();
-            drawDetections(detection);
-        }
-        
-        // Update detection list
-        function updateDetectionList(detection) {
-            const listEl = document.getElementById('detectionList');
-            // Support both old format (fused_detections) and new format (camera0/camera1)
-            const camera0Dets = detection.camera0?.detections || [];
-            const camera1Dets = detection.camera1?.detections || [];
-            const detections = detection.fused_detections || [...camera0Dets, ...camera1Dets];
-            
-            if (detections.length === 0) {
-                listEl.innerHTML = '<div class="no-data">No objects detected</div>';
-                return;
-            }
-            
-            listEl.innerHTML = '';
-            detections.slice(0, 10).forEach(det => {
-                const item = document.createElement('div');
-                item.className = 'detection-item';
-                
-                const models = det.models || [det.model];
-                const modelBadges = models.map(m => 
-                    `<span class="model-badge">${m}</span>`
-                ).join('');
-                
-                item.innerHTML = `
-                    <div class="detection-header">
-                        <span class="class-name">${det.class_name}</span>
-                        <span class="confidence">${(det.confidence * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="detection-meta">
-                        ${modelBadges}
-                        ${det.num_models ? `<span>| ${det.num_models} models</span>` : ''}
-                    </div>
-                `;
-                
-                listEl.appendChild(item);
-            });
-        }
-        
-        // Update statistics display
-        function updateStatistics() {
-            document.getElementById('totalDetections').textContent = detectionCount;
-            
-            // Calculate FPS
-            if (latestDetection) {
-                const fps = latestDetection.inference_time ? 
-                    (1 / latestDetection.inference_time).toFixed(1) : '0';
-                document.getElementById('currentFPS').textContent = fps;
-                
-                // Average confidence
-                const camera0Dets = latestDetection.camera0?.detections || [];
-                const camera1Dets = latestDetection.camera1?.detections || [];
-                const detections = latestDetection.fused_detections || [...camera0Dets, ...camera1Dets];
-                if (detections.length > 0) {
-                    const avgConf = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
-                    document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(1) + '%';
-                }
-            }
-            
-            // Fetch system stats
-            fetch(`${API_URL}/stats`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.detection) {
-                        document.getElementById('uptime').textContent = 
-                            formatUptime(data.detection.uptime_seconds);
-                    }
-                    if (data.system) {
-                        updateModelStats(data.system);
-                    }
-                })
-                .catch(err => console.error('Error fetching stats:', err));
-        }
-        
-        // Draw detections on canvas (improved: supports frames and canvas resizing)
-        function resizeCanvasToDisplaySize(canvas) {
-            const dpr = window.devicePixelRatio || 1;
-            const width = Math.floor(canvas.clientWidth * dpr);
-            const height = Math.floor(canvas.clientHeight * dpr);
-            if (canvas.width !== width || canvas.height !== height) {
-                canvas.width = width;
-                canvas.height = height;
-            }
-        }
-
-        function drawImageFromBase64(canvas, ctx, base64OrDataUri, callback) {
-            const img = new Image();
-            img.onload = () => {
-                resizeCanvasToDisplaySize(canvas);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                console.debug('Image drawn on canvas', {canvas: canvas.id, width: canvas.width, height: canvas.height});
-                if (callback) callback();
-            };
-            img.onerror = (err) => {
-                // If image load fails still call callback so boxes can be drawn on blank canvas
-                console.error('Failed to load image for', canvas.id, err);
-                if (callback) callback();
-            };
-
-            // Accept either a full data URI or plain base64
-            try {
-                if (typeof base64OrDataUri === 'string' && base64OrDataUri.startsWith('data:')) {
-                    img.src = base64OrDataUri;
-                } else {
-                    img.src = 'data:image/jpeg;base64,' + base64OrDataUri;
-                }
-            } catch (e) {
-                console.error('Error setting image src for', canvas.id, e);
-                if (callback) callback();
-            }
-        }
-
-        function drawBoxesOnCtx(ctx, detections, scaleX = 1, scaleY = 1) {
-            // Choose a font size that respects devicePixelRatio for crisp text
-            const dpr = window.devicePixelRatio || 1;
-            ctx.font = `${Math.max(12, Math.round(14 * dpr))}px sans-serif`;
-            ctx.textBaseline = 'top';
-
-            detections.forEach(det => {
-                const [x1, y1, x2, y2] = det.bbox;
-                const rx = x1 * scaleX;
-                const ry = y1 * scaleY;
-                const rw = (x2 - x1) * scaleX;
-                const rh = (y2 - y1) * scaleY;
-
-                // Draw bounding box
-                ctx.strokeStyle = '#2ecc71';
-                ctx.lineWidth = Math.max(2, Math.round(3 * dpr));
-                ctx.strokeRect(rx, ry, rw, rh);
-
-                // Draw label background and text
-                const label = `${det.class_name} ${(det.confidence * 100).toFixed(0)}%`;
-                const padding = 6 * dpr;
-                const textWidth = ctx.measureText(label).width;
-                const textHeight = parseInt(ctx.font, 10) || Math.round(14 * dpr);
-
-                const bgX = rx;
-                const bgY = Math.max(ry - textHeight - padding, 0);
-                ctx.fillStyle = '#2ecc71';
-                ctx.fillRect(bgX, bgY, textWidth + padding * 2, textHeight + padding);
-
-                ctx.fillStyle = '#000';
-                ctx.fillText(label, bgX + padding, bgY + (padding / 2));
-            });
-        }
-
-        function drawDetections(detection) {
-            // Get detections for each camera separately
-            const camera0Dets = detection.camera0?.detections || detection.fused_detections || [];
-            const camera1Dets = detection.camera1?.detections || [];
-
-            // Resize canvases to match display size (handles HiDPI screens)
-            resizeCanvasToDisplaySize(camera0Canvas);
-            resizeCanvasToDisplaySize(camera1Canvas);
-
-            // Compute scaling if frame dimensions are provided in the message
-            const frameW = detection.frame_width || detection.frame_width_px || null;
-            const frameH = detection.frame_height || detection.frame_height_px || null;
-            const scaleX = frameW ? (camera0Canvas.width / frameW) : 1;
-            const scaleY = frameH ? (camera0Canvas.height / frameH) : 1;
-
-            // Helper to draw boxes after (or without) an image
-            const drawBoxesCallback = () => {
-                // If we have no image we should clear the canvas first
-                if (!detection.frame_base64 && !(detection.camera_frames && detection.camera_frames[0])) {
-                    ctx0.fillStyle = '#000';
-                    ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
-                }
-                if (camera0Dets.length > 0) {
-                    drawBoxesOnCtx(ctx0, camera0Dets, scaleX, scaleY);
-                }
-            };
-            
-            // Helper for camera1 boxes
-            const drawBoxesCallback1 = () => {
-                if (camera1Dets.length > 0) {
-                    drawBoxesOnCtx(ctx1, camera1Dets, scaleX, scaleY);
-                }
-            };
-
-            // Draw camera0 frame if present (supports detection.frame_base64 or detection.camera_frames[0])
-            if (detection.frame_base64) {
-                drawImageFromBase64(camera0Canvas, ctx0, detection.frame_base64, drawBoxesCallback);
-            } else if (detection.camera_frames && detection.camera_frames[0]) {
-                drawImageFromBase64(camera0Canvas, ctx0, detection.camera_frames[0], drawBoxesCallback);
-            } else {
-                // No frame: clear and draw boxes on black background
-                ctx0.fillStyle = '#000';
-                ctx0.fillRect(0, 0, camera0Canvas.width, camera0Canvas.height);
-                drawBoxesCallback();
-            }
-
-            // Draw camera1 frame if present with detections
-            if (detection.camera_frames && detection.camera_frames[1]) {
-                drawImageFromBase64(camera1Canvas, ctx1, detection.camera_frames[1], drawBoxesCallback1);
-            } else {
-                // Ensure camera1 is cleared when no frame
-                ctx1.fillStyle = '#000';
-                ctx1.fillRect(0, 0, camera1Canvas.width, camera1Canvas.height);
-                // Still draw boxes if we have detections but no frame
-                if (camera1Dets.length > 0) {
-                    drawBoxesCallback1();
-                }
-            }
-        }
-        
-        // Update model statistics
-        function updateModelStats(stats) {
-            const modelStatsEl = document.getElementById('modelStats');
-            
-            if (!stats.models || stats.models.length === 0) {
-                modelStatsEl.innerHTML = '<div class="no-data">No model statistics available</div>';
-                return;
-            }
-            
-            modelStatsEl.innerHTML = '';
-            stats.models.forEach(model => {
-                const statItem = document.createElement('div');
-                statItem.className = 'stat-item';
-                statItem.style.marginBottom = '10px';
-                statItem.innerHTML = `
-                    <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">
-                        ${model.model_name}
-                    </div>
-                    <div style="font-size: 0.9em;">
-                        Inference: ${model.avg_inference_time_ms?.toFixed(1) || 0}ms<br>
-                        Detections: ${model.total_detections || 0}
-                    </div>
-                `;
-                modelStatsEl.appendChild(statItem);
-            });
-        }
-        
-        // Format uptime
-        function formatUptime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            
-            if (hours > 0) {
-                return `${hours}h ${minutes}m`;
-            } else if (minutes > 0) {
-                return `${minutes}m ${secs}s`;
-            } else {
-                return `${secs}s`;
-            }
-        }
-        
-        // Initialize dashboard
-        function init() {
-            console.log('Initializing dashboard...');
-
-            // Ensure canvases are sized correctly for display (handles HiDPI)
-            resizeCanvasToDisplaySize(camera0Canvas);
-            resizeCanvasToDisplaySize(camera1Canvas);
-
-            connectWebSocket();
-
-            // Update statistics periodically
-            setInterval(updateStatistics, 5000);
-
-            // Redraw overlays when window is resized so boxes stay aligned with frames
-            window.addEventListener('resize', () => {
-                resizeCanvasToDisplaySize(camera0Canvas);
-                resizeCanvasToDisplaySize(camera1Canvas);
-                if (latestDetection) drawDetections(latestDetection);
-            });
-        }
-        
-        // Start dashboard when page loads
-        window.addEventListener('load', init);
-    </script>
+    <!-- Custom Scripts -->
+    <script src="script.js"></script>
 </body>
 </html>
